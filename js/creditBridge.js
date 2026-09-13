@@ -1,17 +1,17 @@
 // creditBridge.js
 // El puente hacia Capital One. No calcula nada del gasto: solo observa el
-// modelo de autonomía y decide dos cosas distintas, a propósito.
+// modelo y decide dos cosas distintas, a propósito.
 //
-//   ELEGIBILIDAD  -> autonomía sostenida sobre la meta.
-//   MONTO         -> costo semanal de operación verificado.
+//   ELEGIBILIDAD  -> cobertura sostenida (saldo ÷ costo de operación).
+//   MONTO         -> costo de operación verificado.
 //
 // Separarlas es lo que cierra el fraude: exagerar gastos del negocio hunde la
-// autonomía y descalifica; esconderlos mantiene la autonomía pero encoge la
+// cobertura y descalifica; esconderlos mantiene la cobertura pero encoge la
 // línea. El máximo está en clasificar honestamente.
 
 const CreditBridge = (function () {
   const CYCLES_REQUIRED = 3;
-  const WEEKS_OF_OPERATION = 2; // la línea cubre 2 semanas de operación
+  const CYCLES_COVERED = 2; // la línea cubre 2 ciclos de operación
 
   let cycles = 0;
   let unlocked = false;
@@ -32,7 +32,7 @@ const CreditBridge = (function () {
   });
 
   function offer() {
-    return PredictModel.getWeeklyBurn() * WEEKS_OF_OPERATION;
+    return PredictModel.getOperatingCost() * CYCLES_COVERED;
   }
 
   function render() {
@@ -56,9 +56,8 @@ const CreditBridge = (function () {
     statusEl.textContent = "Pre-aprobado";
     render();
 
-    const weeks = PredictModel.getAutonomyWeeks();
     approvalAmountEl.textContent = formatMoney(offer());
-    compareWeeksEl.textContent = formatWeeks(weeks) + " de autonomía";
+    compareWeeksEl.textContent = formatMoney(PredictModel.getOperatingCost()) + " de operación";
     approvalEl.classList.add("show");
 
     cardEl.classList.add("pulse");
@@ -70,10 +69,10 @@ const CreditBridge = (function () {
   // Se llama cada vez que el modelo aprende un gasto del negocio.
   function evaluate() {
     if (unlocked) return;
-    const weeks = PredictModel.getAutonomyWeeks();
-    if (weeks === null) return;
+    const cover = PredictModel.getCoverage();
+    if (cover === null) return;
 
-    cycles = weeks >= PredictModel.GOAL_WEEKS ? cycles + 1 : 0;
+    cycles = cover >= PredictModel.COVERAGE_GOAL ? cycles + 1 : 0;
     render();
 
     if (cycles >= CYCLES_REQUIRED) unlock();

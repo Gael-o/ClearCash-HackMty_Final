@@ -12,10 +12,6 @@ function formatMoney(amount) {
   return "$" + Math.round(amount).toLocaleString("es-MX");
 }
 
-function formatWeeks(weeks) {
-  return weeks.toFixed(1).replace(".", ",") + (weeks < 2 ? " semana" : " semanas");
-}
-
 async function cargarColaDeGastos() {
   try {
     const { data: registros, error } = await supabaseClient

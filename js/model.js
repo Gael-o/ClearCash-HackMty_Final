@@ -1,17 +1,18 @@
 // model.js
-// Modelo de autonomía. Solo aprende de los gastos que el usuario marcó como
-// "del negocio": con ellos estima el costo semanal de operación y lo traduce a
-// la única métrica que el usuario entiende sin pensar: cuántas semanas puede
-// operar sin recibir un peso.
+// Modelo de costo de operación. Solo aprende de los gastos que el usuario marcó
+// como "del negocio" y estima cuánto le cuesta operar. No intenta adivinar a qué
+// se dedica: no lo necesita, y tampoco inventa una unidad de tiempo —la tabla de
+// gastos no trae fechas, así que cualquier "por semana" sería un número sacado
+// de la nada. El costo es el promedio de lo que el propio usuario confirmó.
 //
-// El diseño del incentivo vive aquí. Marcar gastos personales como del negocio
-// infla el costo semanal y HUNDE la autonomía, así que exagerar descalifica.
-// Y como la línea de crédito se calcula sobre ese mismo costo semanal
-// (ver creditBridge.js), esconder gastos del negocio encoge la oferta.
-// Decir la verdad es el único punto donde al usuario le va mejor.
+// La cobertura (saldo ÷ costo) no se le muestra al usuario: es la regla de
+// elegibilidad que consume creditBridge.js. Ahí vive el incentivo: inflar los
+// gastos del negocio hunde la cobertura y descalifica, mientras que esconderlos
+// mantiene la cobertura pero encoge la línea, que se calcula sobre este mismo
+// costo. Decir la verdad es el único punto donde al usuario le va mejor.
 
 const PredictModel = (function () {
-  const GOAL_WEEKS = 1.5;
+  const COVERAGE_GOAL = 1.5;
 
   let workExpenses = [];
   let history = [];
@@ -22,66 +23,63 @@ const PredictModel = (function () {
   const lineEl = document.getElementById("sparkLine");
   const goalEl = document.getElementById("sparkGoal");
 
-  function weeklyBurn() {
+  function operatingCost() {
     if (!workExpenses.length) return 0;
     const total = workExpenses.reduce(function (s, t) { return s + t.amount; }, 0);
     return total / workExpenses.length;
   }
 
-  function autonomyWeeks() {
-    const burn = weeklyBurn();
-    if (!burn) return null;
-    return BankAccount.getBalance() / burn;
+  function coverage() {
+    const cost = operatingCost();
+    if (!cost) return null;
+    return BankAccount.getBalance() / cost;
   }
 
+  // La línea muestra cómo se acomoda la estimación conforme entran más datos.
   function renderSpark() {
     if (history.length < 2) {
       lineEl.setAttribute("d", "");
       goalEl.setAttribute("d", "");
       return;
     }
-    const max = Math.max(GOAL_WEEKS * 1.6, Math.max.apply(null, history));
+    const max = Math.max.apply(null, history) * 1.15;
     const stepX = 120 / (history.length - 1);
     const y = function (v) { return 30 - Math.min(v / max, 1) * 26; };
 
-    const d = history.map(function (v, i) {
+    lineEl.setAttribute("d", history.map(function (v, i) {
       return (i ? "L" : "M") + (i * stepX).toFixed(1) + " " + y(v).toFixed(1);
-    }).join(" ");
+    }).join(" "));
 
-    lineEl.setAttribute("d", d);
-    goalEl.setAttribute("d", "M0 " + y(GOAL_WEEKS).toFixed(1) + " L120 " + y(GOAL_WEEKS).toFixed(1));
+    const last = history[history.length - 1];
+    goalEl.setAttribute("d", "M0 " + y(last).toFixed(1) + " L120 " + y(last).toFixed(1));
   }
 
   function render() {
-    const weeks = autonomyWeeks();
+    const cost = operatingCost();
 
-    if (weeks === null) {
+    if (!cost) {
       numEl.textContent = "—";
       footEl.textContent = "clasifica un gasto del negocio";
-      tileEl.classList.remove("ok", "risk");
+      tileEl.classList.remove("ok");
       renderSpark();
       return;
     }
 
-    numEl.textContent = formatWeeks(weeks);
+    numEl.textContent = formatMoney(cost);
     numEl.classList.remove("settling");
     void numEl.offsetWidth;
     numEl.classList.add("settling");
 
-    const ok = weeks >= GOAL_WEEKS;
-    tileEl.classList.toggle("ok", ok);
-    tileEl.classList.toggle("risk", !ok);
-    footEl.textContent = ok
-      ? "puedes operar sin ingresos"
-      : "por debajo de la meta (" + formatWeeks(GOAL_WEEKS) + ")";
+    tileEl.classList.add("ok");
+    footEl.textContent = "según " + workExpenses.length +
+      (workExpenses.length === 1 ? " gasto que confirmaste" : " gastos que confirmaste");
 
     renderSpark();
   }
 
   function addDataPoint(tx) {
     workExpenses.push(tx);
-    const w = autonomyWeeks();
-    if (w !== null) history.push(w);
+    history.push(operatingCost());
     render();
   }
 
@@ -98,8 +96,9 @@ const PredictModel = (function () {
   return {
     addDataPoint: addDataPoint,
     removeDataPoint: removeDataPoint,
-    getAutonomyWeeks: autonomyWeeks,
-    getWeeklyBurn: weeklyBurn,
-    GOAL_WEEKS: GOAL_WEEKS
+    getCoverage: coverage,
+    getOperatingCost: operatingCost,
+    getSampleSize: function () { return workExpenses.length; },
+    COVERAGE_GOAL: COVERAGE_GOAL
   };
 })();
