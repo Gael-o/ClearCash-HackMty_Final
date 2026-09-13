@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearCash</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="brand">
+    <svg class="brand-icon" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+      <defs>
+        <linearGradient id="billGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#8FE0B4"/>
+          <stop offset="100%" stop-color="#3E9E68"/>
+        </linearGradient>
+      </defs>
+      <rect x="6" y="16" width="52" height="32" rx="7" fill="url(#billGrad)"/>
+      <circle cx="32" cy="32" r="9" fill="none" stroke="#0E3B2E" stroke-width="2" opacity="0.35"/>
+      <text x="32" y="37" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#0E3B2E">$</text>
+      <circle cx="15" cy="23" r="2" fill="#0E3B2E" opacity="0.3"/>
+      <circle cx="49" cy="41" r="2" fill="#0E3B2E" opacity="0.3"/>
+    </svg>
+    <span class="brand-word"><span class="brand-clear">CLEAR</span><span class="brand-cash">Cash</span></span>
+  </div>
+
+  <div class="top">
+    <div class="greeting">
+      <p>Buenos días,</p>
+      <h1>Marisela</h1>
+    </div>
+    <div class="avatar">M</div>
+  </div>
+
+  <div class="app-grid">
+    <div class="card bank">
+      <p class="card-label">Cuenta bancaria &middot; simulada vía Nessie</p>
+      <p class="card-num" id="bankBalance">$8,450</p>
+      <p class="card-sub">Saldo disponible en tiempo real, conectado como si fuera tu cuenta real.</p>
+      <div class="divider-thin"></div>
+      <div class="mini-row"><span>Último movimiento</span><span id="lastMove">—</span></div>
+      <div class="mini-row"><span>Transacciones procesadas</span><span id="txCount">0</span></div>
+    </div>
+
+    <div class="card model">
+      <p class="card-label">Colchón</p>
+      <p class="card-num" id="modelPrediction">—</p>
+      <div class="adjust-row flat" id="adjustRow">
+        <span class="arrow" id="adjustArrow"></span>
+        <span class="adjust-val" id="adjustVal">sin datos</span>
+      </div>
+    </div>
+
+    <div class="card credit locked" id="creditCard">
+      <div class="credit-top">
+        <p class="card-label">Puente de crédito &middot; Capital One</p>
+        <span class="credit-status" id="creditStatus">Bloqueado</span>
+      </div>
+      <p class="credit-headline" id="creditHeadline">Mantén tu colchón de trabajo sobre la meta por 40 ajustes seguidos para desbloquear una línea de crédito simulada.</p>
+      <div class="credit-progress-track"><div class="credit-progress-fill" id="creditProgressFill" style="width:0%"></div></div>
+      <p class="credit-progress-label" id="creditProgressLabel">0 / 40 ajustes con colchón sobre la meta ($4,000)</p>
+
+      <div class="credit-unlocked" id="creditUnlocked" style="display:none;">
+        <p class="credit-amount" id="creditAmount">$0</p>
+        <p class="credit-sub" id="creditSub">Línea de crédito pre-aprobada, simulada vía Nessie, según tu colchón sostenido.</p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-area" id="stageArea">
+        <p class="placeholder-text" id="placeholderText">Presiona "Notificación" para simular una nueva transacción de tu cuenta.</p>
+      </div>
+
+      <button class="notif-btn" id="notifBtn">
+        <span class="dot" id="notifDot" style="display:none;"></span>
+        <span id="notifBtnText">Notificación</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="log">
+    <h2>Historial de decisiones</h2>
+    <div id="logList">
+      <p class="log-empty">Las transacciones que aceptes o descartes aparecerán aquí.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Orden importa: cada módulo depende de que el anterior ya exista en window -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/data.js"></script>
+<script src="js/bank.js"></script>
+<script src="js/model.js"></script>
+<script src="js/log.js"></script>
+<script src="js/creditBridge.js"></script>
+<script src="js/interaction.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
