@@ -1,5 +1,4 @@
 // app.js
-// Punto de arranque. No contiene lógica de negocio: solo conecta el botón
-// "Notificación" con el flujo de NotificationFlow.
+// Punto de arranque: ya no hay botón, el flujo empieza solo al abrir la app.
 
-document.getElementById("notifBtn").addEventListener("click", NotificationFlow.start);
+NotificationFlow.init();

@@ -1,72 +1,92 @@
 // creditBridge.js
-// El "puente de crédito": no calcula nada del colchón, solo observa el
-// resultado de PredictModel. Si el colchón se mantiene por varios ajustes
-// seguidos sobre una meta, desbloquea una línea de crédito simulada
-// (como si Capital One la pre-aprobara con base en ese historial).
+// El puente hacia Capital One. No calcula nada del gasto: solo observa el
+// modelo de autonomía y decide dos cosas distintas, a propósito.
+//
+//   ELEGIBILIDAD  -> autonomía sostenida sobre la meta.
+//   MONTO         -> costo semanal de operación verificado.
+//
+// Separarlas es lo que cierra el fraude: exagerar gastos del negocio hunde la
+// autonomía y descalifica; esconderlos mantiene la autonomía pero encoge la
+// línea. El máximo está en clasificar honestamente.
 
 const CreditBridge = (function () {
-  const GOAL_BUFFER = 4000;   // meta de colchón de trabajo
-  const STREAK_TARGET = 40;   // ajustes seguidos que se necesitan sobre la meta
+  const CYCLES_REQUIRED = 3;
+  const WEEKS_OF_OPERATION = 2; // la línea cubre 2 semanas de operación
 
-  let streak = 0;
+  let cycles = 0;
   let unlocked = false;
 
   const cardEl = document.getElementById("creditCard");
   const statusEl = document.getElementById("creditStatus");
-  const headlineEl = document.getElementById("creditHeadline");
   const fillEl = document.getElementById("creditProgressFill");
   const labelEl = document.getElementById("creditProgressLabel");
-  const unlockedEl = document.getElementById("creditUnlocked");
   const amountEl = document.getElementById("creditAmount");
 
-  function render() {
-    const pct = Math.min(100, Math.round((streak / STREAK_TARGET) * 100));
-    fillEl.style.width = pct + "%";
-    labelEl.textContent =
-      streak + " / " + STREAK_TARGET + " ajustes con colchón sobre la meta (" + formatMoney(GOAL_BUFFER) + ")";
+  const approvalEl = document.getElementById("approval");
+  const approvalAmountEl = document.getElementById("approvalAmount");
+  const compareWeeksEl = document.getElementById("compareWeeks");
+  const approvalCloseEl = document.getElementById("approvalClose");
+
+  approvalCloseEl.addEventListener("click", function () {
+    approvalEl.classList.remove("show");
+  });
+
+  function offer() {
+    return PredictModel.getWeeklyBurn() * WEEKS_OF_OPERATION;
   }
 
-  function unlock(buffer) {
+  function render() {
+    const pct = Math.min(100, Math.round((cycles / CYCLES_REQUIRED) * 100));
+    fillEl.style.width = pct + "%";
+
+    if (unlocked) {
+      labelEl.textContent = "línea pre-aprobada, lista para usar";
+      amountEl.textContent = formatMoney(offer());
+      return;
+    }
+
+    labelEl.textContent = cycles + " de " + CYCLES_REQUIRED + " ciclos verificados";
+    amountEl.textContent = cycles ? "en camino" : "—";
+  }
+
+  function unlock() {
     unlocked = true;
     cardEl.classList.remove("locked");
     cardEl.classList.add("unlocked");
     statusEl.textContent = "Pre-aprobado";
-    headlineEl.textContent = "Tu colchón de trabajo se mantuvo estable. Esto es lo que Capital One te pre-aprueba.";
-    unlockedEl.style.display = "block";
+    render();
 
-    const preApproved = buffer * 0.6; // línea simulada como fracción del colchón sostenido
-    amountEl.textContent = formatMoney(preApproved);
+    const weeks = PredictModel.getAutonomyWeeks();
+    approvalAmountEl.textContent = formatMoney(offer());
+    compareWeeksEl.textContent = formatWeeks(weeks) + " de autonomía";
+    approvalEl.classList.add("show");
 
-    const badge = document.createElement("p");
-    badge.className = "capital-one-badge";
-    badge.textContent = "✓ Línea de crédito Capital One pre-aprobada";
-    unlockedEl.insertBefore(badge, unlockedEl.firstChild);
-
-    cardEl.classList.add("celebrate", "pulse");
+    cardEl.classList.add("pulse");
     cardEl.addEventListener("animationend", function () {
       cardEl.classList.remove("pulse");
     }, { once: true });
   }
 
-  // Único punto de entrada: se llama cada vez que el modelo recalcula el
-  // colchón (es decir, cada vez que se guarda un dato nuevo).
-  function evaluate(buffer) {
-    if (unlocked || buffer === null || buffer === undefined) return;
+  // Se llama cada vez que el modelo aprende un gasto del negocio.
+  function evaluate() {
+    if (unlocked) return;
+    const weeks = PredictModel.getAutonomyWeeks();
+    if (weeks === null) return;
 
-    if (buffer >= GOAL_BUFFER) {
-      streak += 1;
-    } else {
-      streak = 0;
-    }
-
+    cycles = weeks >= PredictModel.GOAL_WEEKS ? cycles + 1 : 0;
     render();
 
-    if (streak >= STREAK_TARGET) {
-      unlock(buffer);
-    }
+    if (cycles >= CYCLES_REQUIRED) unlock();
+  }
+
+  // Se llama cuando el usuario deshace una clasificación de negocio.
+  function revoke() {
+    if (unlocked) return;
+    cycles = Math.max(0, cycles - 1);
+    render();
   }
 
   render();
 
-  return { evaluate: evaluate };
+  return { evaluate: evaluate, revoke: revoke };
 })();

@@ -15,84 +15,108 @@
 
 <div class="wrap">
 
-  <div class="brand">
-    <svg class="brand-icon" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
-      <defs>
-        <linearGradient id="billGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#8FE0B4"/>
-          <stop offset="100%" stop-color="#3E9E68"/>
-        </linearGradient>
-      </defs>
-      <rect x="6" y="16" width="52" height="32" rx="7" fill="url(#billGrad)"/>
-      <circle cx="32" cy="32" r="9" fill="none" stroke="#0E3B2E" stroke-width="2" opacity="0.35"/>
-      <text x="32" y="37" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#0E3B2E">$</text>
-      <circle cx="15" cy="23" r="2" fill="#0E3B2E" opacity="0.3"/>
-      <circle cx="49" cy="41" r="2" fill="#0E3B2E" opacity="0.3"/>
-    </svg>
-    <span class="brand-word"><span class="brand-clear">CLEAR</span><span class="brand-cash">Cash</span></span>
-  </div>
-
-  <div class="top">
-    <div class="greeting">
-      <p>Buenos días,</p>
-      <h1>Marisela</h1>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 64 64" width="32" height="32" aria-hidden="true">
+        <defs>
+          <linearGradient id="billGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#8FE0B4"/>
+            <stop offset="100%" stop-color="#3E9E68"/>
+          </linearGradient>
+        </defs>
+        <rect x="6" y="16" width="52" height="32" rx="7" fill="url(#billGrad)"/>
+        <circle cx="32" cy="32" r="9" fill="none" stroke="#0E3B2E" stroke-width="2" opacity="0.35"/>
+        <text x="32" y="37" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" font-weight="700" fill="#0E3B2E">$</text>
+      </svg>
+      <span class="brand-word"><span class="brand-clear">CLEAR</span><span class="brand-cash">Cash</span></span>
     </div>
-    <div class="avatar">M</div>
-  </div>
+    <div class="who">
+      <span class="who-name">Marisela</span>
+      <span class="avatar">M</span>
+    </div>
+  </header>
 
-  <div class="app-grid">
-    <div class="card bank">
-      <p class="card-label">Cuenta bancaria &middot; simulada vía Nessie</p>
-      <p class="card-num" id="bankBalance">$8,450</p>
-      <p class="card-sub">Saldo disponible en tiempo real, conectado como si fuera tu cuenta real.</p>
-      <div class="divider-thin"></div>
-      <div class="mini-row"><span>Último movimiento</span><span id="lastMove">—</span></div>
-      <div class="mini-row"><span>Transacciones procesadas</span><span id="txCount">0</span></div>
+  <!-- HÉROE: el swipe es la función distintiva, va hasta arriba -->
+  <section class="hero">
+    <div class="hero-head">
+      <span class="hero-kicker">¿Este gasto es de tu negocio?</span>
+      <span class="queue-badge" id="queueBadge">esperando</span>
     </div>
 
-    <div class="card model">
-      <p class="card-label">Colchón</p>
-      <p class="card-num" id="modelPrediction">—</p>
-      <div class="adjust-row flat" id="adjustRow">
-        <span class="arrow" id="adjustArrow"></span>
-        <span class="adjust-val" id="adjustVal">sin datos</span>
-      </div>
+    <div class="stage-area" id="stageArea">
+      <p class="placeholder-text" id="placeholderText">Conectando con tu cuenta…</p>
     </div>
 
-    <div class="card credit locked" id="creditCard">
-      <div class="credit-top">
-        <p class="card-label">Puente de crédito &middot; Capital One</p>
+    <div class="swipe-legend">
+      <span class="legend work">&larr;&nbsp; Del negocio</span>
+      <span class="legend personal">Personal &nbsp;&rarr;</span>
+    </div>
+  </section>
+
+  <!-- Métricas compactas: etiqueta chica + número enorme + micro-contexto -->
+  <section class="metrics">
+
+    <div class="tile">
+      <p class="tile-label">Tu saldo</p>
+      <p class="tile-num" id="bankBalance">$8,450</p>
+      <p class="tile-foot" id="lastMove">sin movimientos</p>
+    </div>
+
+    <div class="tile" id="autonomyTile">
+      <p class="tile-label">Autonomía</p>
+      <p class="tile-num" id="autonomyNum">—</p>
+      <p class="tile-foot" id="autonomyFoot">sin datos aún</p>
+      <svg class="spark" id="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+        <path class="spark-goal" id="sparkGoal" d=""></path>
+        <path class="spark-line" id="sparkLine" d=""></path>
+      </svg>
+    </div>
+
+    <div class="tile credit locked" id="creditCard">
+      <div class="tile-label-row">
+        <p class="tile-label">Tu crédito</p>
         <span class="credit-status" id="creditStatus">Bloqueado</span>
       </div>
-      <p class="credit-headline" id="creditHeadline">Mantén tu colchón de trabajo sobre la meta por 40 ajustes seguidos para desbloquear una línea de crédito simulada.</p>
+      <p class="tile-num" id="creditAmount">—</p>
       <div class="credit-progress-track"><div class="credit-progress-fill" id="creditProgressFill" style="width:0%"></div></div>
-      <p class="credit-progress-label" id="creditProgressLabel">0 / 40 ajustes con colchón sobre la meta ($4,000)</p>
-
-      <div class="credit-unlocked" id="creditUnlocked" style="display:none;">
-        <p class="credit-amount" id="creditAmount">$0</p>
-        <p class="credit-sub" id="creditSub">Línea de crédito pre-aprobada, simulada vía Nessie, según tu colchón sostenido.</p>
-      </div>
+      <p class="tile-foot" id="creditProgressLabel">0 de 3 meses de operación estable</p>
     </div>
 
-    <div class="stage">
-      <div class="stage-area" id="stageArea">
-        <p class="placeholder-text" id="placeholderText">Presiona "Notificación" para simular una nueva transacción de tu cuenta.</p>
-      </div>
+  </section>
 
-      <button class="notif-btn" id="notifBtn">
-        <span class="dot" id="notifDot" style="display:none;"></span>
-        <span id="notifBtnText">Notificación</span>
-      </button>
+  <section class="log">
+    <div class="log-head">
+      <h2>Historial</h2>
+      <span class="log-hint">¿Te equivocaste? Toca &#8634; para volver a clasificar</span>
     </div>
-  </div>
-
-  <div class="log">
-    <h2>Historial de decisiones</h2>
     <div id="logList">
-      <p class="log-empty">Las transacciones que aceptes o descartes aparecerán aquí.</p>
+      <p class="log-empty">Aquí aparecen los gastos que ya clasificaste.</p>
     </div>
-  </div>
+  </section>
 
+</div>
+
+<!-- Pantalla de pre-aprobación: el clímax de la demo -->
+<div class="approval" id="approval">
+  <div class="approval-inner">
+    <p class="approval-kicker">Capital One</p>
+    <h2 class="approval-title">Marisela, estás pre-aprobada</h2>
+    <p class="approval-amount" id="approvalAmount">$0</p>
+    <div class="approval-compare">
+      <div class="compare-col before">
+        <p class="compare-label">Antes</p>
+        <p class="compare-val">Sin historial</p>
+        <p class="compare-sub">Invisible para el buró</p>
+      </div>
+      <div class="compare-arrow">&rarr;</div>
+      <div class="compare-col after">
+        <p class="compare-label">Ahora</p>
+        <p class="compare-val" id="compareWeeks">—</p>
+        <p class="compare-sub">Flujo verificado, gasto separado</p>
+      </div>
+    </div>
+    <button class="approval-close" id="approvalClose">Continuar</button>
+  </div>
 </div>
 
 <!-- Orden importa: cada módulo depende de que el anterior ya exista en window -->

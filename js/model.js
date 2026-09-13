@@ -1,86 +1,105 @@
 // model.js
-// El modelo de predictibilidad. Guarda únicamente las transacciones que el
-// usuario aprueba (swipe izquierda) y, con cada dato nuevo, recalcula el
-// colchón recomendado. En vez de mostrar una "certeza" aparte, el número
-// mismo se ajusta y mostramos cuánto se movió respecto al cálculo anterior.
+// Modelo de autonomía. Solo aprende de los gastos que el usuario marcó como
+// "del negocio": con ellos estima el costo semanal de operación y lo traduce a
+// la única métrica que el usuario entiende sin pensar: cuántas semanas puede
+// operar sin recibir un peso.
+//
+// El diseño del incentivo vive aquí. Marcar gastos personales como del negocio
+// infla el costo semanal y HUNDE la autonomía, así que exagerar descalifica.
+// Y como la línea de crédito se calcula sobre ese mismo costo semanal
+// (ver creditBridge.js), esconder gastos del negocio encoge la oferta.
+// Decir la verdad es el único punto donde al usuario le va mejor.
 
 const PredictModel = (function () {
-  let savedData = [];
-  let previousPrediction = null;
+  const GOAL_WEEKS = 1.5;
 
-  const predictionEl = document.getElementById("modelPrediction");
-  const adjustRowEl = document.getElementById("adjustRow");
-  const adjustArrowEl = document.getElementById("adjustArrow");
-  const adjustValEl = document.getElementById("adjustVal");
+  let workExpenses = [];
+  let history = [];
 
-  function computeRecommendedBuffer() {
-    const workData = savedData.filter(function (t) { return t.category === "trabajo"; });
-    const n = savedData.length;
-    const avgWork = workData.length
-      ? workData.reduce(function (s, t) { return s + t.amount; }, 0) / workData.length
-      : savedData.reduce(function (s, t) { return s + t.amount; }, 0) / n;
+  const numEl = document.getElementById("autonomyNum");
+  const footEl = document.getElementById("autonomyFoot");
+  const tileEl = document.getElementById("autonomyTile");
+  const lineEl = document.getElementById("sparkLine");
+  const goalEl = document.getElementById("sparkGoal");
 
-    const weeklyPrediction = avgWork * 5;
-    const recommendedBuffer = weeklyPrediction * 3;
-    return { weeklyPrediction: weeklyPrediction, recommendedBuffer: recommendedBuffer };
+  function weeklyBurn() {
+    if (!workExpenses.length) return 0;
+    const total = workExpenses.reduce(function (s, t) { return s + t.amount; }, 0);
+    return total / workExpenses.length;
   }
 
-  function renderAdjustment(recommendedBuffer) {
-    if (previousPrediction === null) {
-      adjustRowEl.className = "adjust-row flat";
-      adjustArrowEl.textContent = "";
-      adjustValEl.textContent = "primer cálculo";
+  function autonomyWeeks() {
+    const burn = weeklyBurn();
+    if (!burn) return null;
+    return BankAccount.getBalance() / burn;
+  }
+
+  function renderSpark() {
+    if (history.length < 2) {
+      lineEl.setAttribute("d", "");
+      goalEl.setAttribute("d", "");
       return;
     }
-    const delta = recommendedBuffer - previousPrediction;
-    if (Math.abs(delta) < 1) {
-      adjustRowEl.className = "adjust-row flat";
-      adjustArrowEl.textContent = "";
-      adjustValEl.textContent = "sin cambios";
-    } else if (delta > 0) {
-      adjustRowEl.className = "adjust-row up";
-      adjustArrowEl.textContent = "▲";
-      adjustValEl.textContent = "+" + formatMoney(delta);
-    } else {
-      adjustRowEl.className = "adjust-row down";
-      adjustArrowEl.textContent = "▼";
-      adjustValEl.textContent = "\u2212" + formatMoney(Math.abs(delta));
-    }
+    const max = Math.max(GOAL_WEEKS * 1.6, Math.max.apply(null, history));
+    const stepX = 120 / (history.length - 1);
+    const y = function (v) { return 30 - Math.min(v / max, 1) * 26; };
+
+    const d = history.map(function (v, i) {
+      return (i ? "L" : "M") + (i * stepX).toFixed(1) + " " + y(v).toFixed(1);
+    }).join(" ");
+
+    lineEl.setAttribute("d", d);
+    goalEl.setAttribute("d", "M0 " + y(GOAL_WEEKS).toFixed(1) + " L120 " + y(GOAL_WEEKS).toFixed(1));
   }
 
-  function recalc() {
-    const n = savedData.length;
+  function render() {
+    const weeks = autonomyWeeks();
 
-    if (n === 0) {
-      predictionEl.textContent = "—";
-      adjustRowEl.className = "adjust-row flat";
-      adjustArrowEl.textContent = "";
-      adjustValEl.textContent = "sin datos aún";
-      previousPrediction = null;
+    if (weeks === null) {
+      numEl.textContent = "—";
+      footEl.textContent = "clasifica un gasto del negocio";
+      tileEl.classList.remove("ok", "risk");
+      renderSpark();
       return;
     }
 
-    const result = computeRecommendedBuffer();
+    numEl.textContent = formatWeeks(weeks);
+    numEl.classList.remove("settling");
+    void numEl.offsetWidth;
+    numEl.classList.add("settling");
 
-    predictionEl.textContent = formatMoney(result.recommendedBuffer);
-    predictionEl.classList.remove("settling");
-    void predictionEl.offsetWidth; // reinicia la animación
-    predictionEl.classList.add("settling");
+    const ok = weeks >= GOAL_WEEKS;
+    tileEl.classList.toggle("ok", ok);
+    tileEl.classList.toggle("risk", !ok);
+    footEl.textContent = ok
+      ? "puedes operar sin ingresos"
+      : "por debajo de la meta (" + formatWeeks(GOAL_WEEKS) + ")";
 
-    renderAdjustment(result.recommendedBuffer);
-    previousPrediction = result.recommendedBuffer;
+    renderSpark();
   }
 
-  // Único punto de entrada: se le pasa una transacción ya aprobada por el usuario.
   function addDataPoint(tx) {
-    savedData.push(tx);
-    recalc();
+    workExpenses.push(tx);
+    const w = autonomyWeeks();
+    if (w !== null) history.push(w);
+    render();
   }
 
-  recalc();
+  function removeDataPoint(tx) {
+    const i = workExpenses.indexOf(tx);
+    if (i === -1) return;
+    workExpenses.splice(i, 1);
+    history.pop();
+    render();
+  }
+
+  render();
 
   return {
     addDataPoint: addDataPoint,
-    getBuffer: function () { return previousPrediction; }
+    removeDataPoint: removeDataPoint,
+    getAutonomyWeeks: autonomyWeeks,
+    getWeeklyBurn: weeklyBurn,
+    GOAL_WEEKS: GOAL_WEEKS
   };
 })();
